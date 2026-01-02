@@ -1,34 +1,25 @@
-import resolve from '@rollup/plugin-node-resolve';
-import commonjs from '@rollup/plugin-commonjs';
+// rollup.config.js - Simplified version
+import { defineConfig } from 'rollup';
 import typescript from '@rollup/plugin-typescript';
-import terser from '@rollup/plugin-terser';
 
-export default [
+export default defineConfig([
   {
     input: 'src/index.ts',
     output: [
       {
         file: 'dist/index.js',
         format: 'cjs',
-        sourcemap: true,
         exports: 'named'
       },
       {
         file: 'dist/index.esm.js',
-        format: 'es',
-        sourcemap: true
+        format: 'es'
       }
     ],
     plugins: [
-      resolve(),
-      commonjs(),
       typescript({
-        tsconfig: './tsconfig.json',
-        declaration: true,
-        declarationDir: 'dist'
-      }),
-      terser()
-    ],
-    external: []
+        tsconfig: './tsconfig.json'
+      })
+    ]
   }
-];
+]);

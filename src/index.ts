@@ -1,5 +1,5 @@
-export { MarkdownConverter } from './converter';
-export type { ConvertOptions, Token } from './types';
+import { MarkdownConverter } from './converter.js';
+import { ConvertOptions } from './types.js';
 
 /**
  * Convert Telegram-style Markdown to HTML
@@ -7,7 +7,7 @@ export type { ConvertOptions, Token } from './types';
  * @param options - Conversion options
  * @returns Telegram-compatible HTML
  */
-export function markdownToHtml(text: string, options?: ConvertOptions): string {
+export function markdownToHtml(text: string, options ? : ConvertOptions): string {
   const converter = new MarkdownConverter(options);
   return converter.convert(text);
 }
@@ -15,9 +15,12 @@ export function markdownToHtml(text: string, options?: ConvertOptions): string {
 /**
  * Create a converter instance with custom options
  */
-export function createConverter(options?: ConvertOptions): MarkdownConverter {
+export function createConverter(options ? : ConvertOptions): MarkdownConverter {
   return new MarkdownConverter(options);
 }
+
+export { MarkdownConverter } from './converter.js';
+export type { ConvertOptions, Token } from './types.js';
 
 export default {
   markdownToHtml,
