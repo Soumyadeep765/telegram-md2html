@@ -1,0 +1,24 @@
+{
+  "name": "telegram-md2html",
+  "version": "1.0.0",
+  "description": "Convert Markdown to Telegram HTML for bots",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "tsc --watch",
+    "test": "node test/test.js"
+  },
+  "keywords": ["telegram", "markdown", "html", "bot"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^11.1.0",
+    "rollup": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
