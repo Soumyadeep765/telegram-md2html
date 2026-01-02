@@ -1,48 +1,43 @@
+
 /**
- * Escapes HTML special characters
+ * Escapes HTML special characters (but not double-escape)
  */
 export function escapeHtml(text: string): string {
-  const htmlEntities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  };
+  if (!text) return text;
   
-  return text.replace(/[&<>"']/g, char => htmlEntities[char] || char);
+  // Replace & first (but not if it's already an entity)
+  let result = text.replace(/&(?!#?\w+;)/g, '&amp;');
+  result = result.replace(/</g, '&lt;');
+  result = result.replace(/>/g, '&gt;');
+  result = result.replace(/"/g, '&quot;');
+  result = result.replace(/'/g, '&#39;');
+  
+  return result;
 }
 
 /**
  * Escapes Telegram HTML special characters
  */
 export function escapeTelegramHtml(text: string): string {
-  const telegramEntities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;'
-  };
+  if (!text) return text;
   
-  return text.replace(/[&<>"]/g, char => telegramEntities[char] || char);
+  // For Telegram, we only need to escape &, <, >, and "
+  let result = text.replace(/&(?!#?\w+;)/g, '&amp;');
+  result = result.replace(/</g, '&lt;');
+  result = result.replace(/>/g, '&gt;');
+  result = result.replace(/"/g, '&quot;');
+  
+  return result;
 }
 
 /**
- * Checks if a position is inside a code block or inline code
+ * Checks if a position is inside a code block
  */
-export function isInsideCode(text: string, position: number): boolean {
-  // Check for inline code
-  const inlineCodeRegex = /`[^`\n]*`/g;
-  let match;
-  
-  while ((match = inlineCodeRegex.exec(text)) !== null) {
-    if (position > match.index && position < match.index + match[0].length) {
-      return true;
-    }
-  }
-  
+export function isInsideCodeBlock(text: string, position: number): boolean {
   // Check for code blocks
   const codeBlockRegex = /```[\s\S]*?```/g;
+  let match;
+  
   while ((match = codeBlockRegex.exec(text)) !== null) {
     if (position > match.index && position < match.index + match[0].length) {
       return true;
@@ -53,17 +48,40 @@ export function isInsideCode(text: string, position: number): boolean {
 }
 
 /**
+ * Checks if a position is inside inline code
+ */
+export function isInsideInlineCode(text: string, position: number): boolean {
+  // Check for inline code
+  const inlineCodeRegex = /`[^`\n]*`/g;
+  let match;
+  
+  while ((match = inlineCodeRegex.exec(text)) !== null) {
+    if (position > match.index && position < match.index + match[0].length) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Checks if a position is inside any code
+ */
+export function isInsideCode(text: string, position: number): boolean {
+  return isInsideCodeBlock(text, position) || isInsideInlineCode(text, position);
+}
+
+/**
  * Appends missing code block delimiters
  */
 export function autoCloseCodeBlocks(text: string): string {
-  let result = text;
-  const codeBlockRegex = /```/g;
-  let matches = Array.from(text.matchAll(codeBlockRegex));
+  // Count triple backticks
+  const tripleBacktickCount = (text.match(/```/g) || []).length;
   
-  // If odd number of delimiters, add one more
-  if (matches.length % 2 === 1) {
-    result += '\n```';
+  // If odd number, add closing backticks
+  if (tripleBacktickCount % 2 === 1) {
+    return text + '\n```';
   }
   
-  return result;
+  return text;
 }

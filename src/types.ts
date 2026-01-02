@@ -28,4 +28,5 @@ export interface Token {
   start: number;
   end: number;
   language?: string;
+  children?: [];
 }

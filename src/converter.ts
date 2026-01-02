@@ -3,14 +3,19 @@ import { MarkdownTokenizer } from './tokenizer';
 import { escapeHtml, escapeTelegramHtml, autoCloseCodeBlocks } from './utils';
 
 export class MarkdownConverter {
-  private options: Required < ConvertOptions > ;
+  private options: Required<ConvertOptions>;
+  private hasCustomLinkProcessor: boolean;
+  private hasCustomCodeBlockProcessor: boolean;
   
   constructor(options: ConvertOptions = {}) {
+    this.hasCustomLinkProcessor = !!options.linkProcessor;
+    this.hasCustomCodeBlockProcessor = !!options.codeBlockProcessor;
+    
     this.options = {
       escapeHtml: options.escapeHtml ?? true,
       autoCloseCodeBlocks: options.autoCloseCodeBlocks ?? true,
-      linkProcessor: options.linkProcessor || this.defaultLinkProcessor,
-      codeBlockProcessor: options.codeBlockProcessor || this.defaultCodeBlockProcessor
+      linkProcessor: options.linkProcessor || this.defaultLinkProcessor.bind(this),
+      codeBlockProcessor: options.codeBlockProcessor || this.defaultCodeBlockProcessor.bind(this)
     };
   }
   
@@ -18,87 +23,187 @@ export class MarkdownConverter {
    * Convert markdown text to Telegram HTML
    */
   convert(text: string): string {
-    // Auto-close code blocks if enabled
-    let processedText = this.options.autoCloseCodeBlocks ?
-      autoCloseCodeBlocks(text) :
-      text;
+  // Auto-close code blocks if enabled
+  let processedText = this.options.autoCloseCodeBlocks 
+    ? autoCloseCodeBlocks(text) 
+    : text;
+  
+  // First pass: convert blockquotes (they should be at line starts)
+  processedText = this.preprocessBlockquotes(processedText);
+  
+  // Convert the text recursively
+  let result = this.convertRecursive(processedText);
+  
+  // Process blockquote markers
+  result = this.processBlockquoteMarkers(result);
+  
+  // Only trim if there's actual content (not just whitespace)
+  if (result.trim() === '') {
+    return text; // Return original text (spaces) if result is empty
+  }
+  
+  return result.trim();
+}
+  
+  /**
+   * Recursively convert markdown, handling nested styles
+   */
+  private convertRecursive(text: string, depth = 0): string {
+    if (depth > 10) return text; // Prevent infinite recursion
     
     // Tokenize the text
-    const tokenizer = new MarkdownTokenizer(processedText);
+    const tokenizer = new MarkdownTokenizer(text);
     const tokens = tokenizer.tokenize();
     
-    // Build the HTML
+    // If no tokens found, return the text as-is (with HTML escaping)
+    if (tokens.length === 0) {
+      return this.options.escapeHtml ? escapeTelegramHtml(text) : text;
+    }
+    
     let result = '';
     let lastPos = 0;
     
     for (const token of tokens) {
       // Add text before token
       if (token.start > lastPos) {
-        result += this.processPlainText(processedText.slice(lastPos, token.start));
+        const textBefore = text.slice(lastPos, token.start);
+        result += this.options.escapeHtml ? escapeTelegramHtml(textBefore) : textBefore;
       }
       
-      // Process the token
-      result += this.processToken(token);
+      // Handle code blocks specially (no recursive parsing inside)
+      if (token.type === 'code_block') {
+        const codeContent = this.options.escapeHtml ? escapeHtml(token.content) : token.content;
+        result += this.wrapToken(token.type, codeContent, token.language);
+        lastPos = token.end;
+        continue;
+      }
+      
+      // Handle inline code specially (no recursive parsing inside)
+      if (token.type === 'inline_code') {
+        const codeContent = this.options.escapeHtml ? escapeHtml(token.content) : token.content;
+        result += `<code>${codeContent}</code>`;
+        lastPos = token.end;
+        continue;
+      }
+      
+      // Process other token content recursively
+      const tokenContent = this.convertRecursive(token.content, depth + 1);
+      
+      // Wrap the content in appropriate HTML tags
+      result += this.wrapToken(token.type, tokenContent, token.language);
       lastPos = token.end;
     }
     
     // Add remaining text
-    if (lastPos < processedText.length) {
-      result += this.processPlainText(processedText.slice(lastPos));
+    if (lastPos < text.length) {
+      const remainingText = text.slice(lastPos);
+      result += this.options.escapeHtml ? escapeTelegramHtml(remainingText) : remainingText;
     }
     
-    // Process blockquotes that might be at line starts
-    result = this.processBlockquotes(result);
-    
-    return result.trim();
+    return result;
   }
   
-  private processPlainText(text: string): string {
-    if (this.options.escapeHtml) {
-      return escapeTelegramHtml(text);
-    }
-    return text;
-  }
-  
-  private processToken(token: Token): string {
-    const escapedContent = this.options.escapeHtml ?
-      escapeHtml(token.content) :
-      token.content;
-    
-    switch (token.type) {
+  /**
+   * Wrap token content in HTML tags
+   */
+  private wrapToken(type: string, content: string, language?: string): string {
+    switch (type) {
       case 'bold':
-        return `<b>${escapedContent}</b>`;
-        
+        return `<b>${content}</b>`;
+      
       case 'italic':
-        return `<i>${escapedContent}</i>`;
-        
+        return `<i>${content}</i>`;
+      
       case 'underline':
-        return `<u>${escapedContent}</u>`;
-        
+        return `<u>${content}</u>`;
+      
       case 'strikethrough':
-        return `<s>${escapedContent}</s>`;
-        
+        return `<s>${content}</s>`;
+      
       case 'spoiler':
-        return `<span class="tg-spoiler">${escapedContent}</span>`;
-        
+        return `<span class="tg-spoiler">${content}</span>`;
+      
       case 'inline_code':
-        return `<code>${escapedContent}</code>`;
-        
+        // Already handled above
+        return `<code>${content}</code>`;
+      
       case 'code_block':
-        return this.options.codeBlockProcessor(token.content, token.language);
-        
+        // Already handled above, but handle custom processor
+        if (this.hasCustomCodeBlockProcessor) {
+          return this.options.codeBlockProcessor(content, language);
+        }
+        const escapedCode = this.options.escapeHtml ? escapeHtml(content) : content;
+        const langAttr = language ? ` class="language-${language}"` : '';
+        return `\n<pre><code${langAttr}>${escapedCode}</code></pre>\n`;
+      
       case 'link':
-        return this.options.linkProcessor(token.language!, token.content);
-        
+        const url = language || '';
+        if (this.hasCustomLinkProcessor) {
+          return this.options.linkProcessor(url, content);
+        }
+        const escapedUrl = this.options.escapeHtml ? escapeHtml(url) : url;
+        const escapedText = this.options.escapeHtml ? escapeHtml(content) : content;
+        return `<a href="${escapedUrl}">${escapedText}</a>`;
+      
       case 'quote':
-        return `\n<blockquote>${escapedContent.trim()}</blockquote>\n`;
-        
+        return `\n<blockquote>${content.trim()}</blockquote>\n`;
+      
       case 'expandable_quote':
-        return `\n<blockquote expandable>${escapedContent.trim()}</blockquote>\n`;
-        
+        return `\n<blockquote expandable>${content.trim()}</blockquote>\n`;
+      
       default:
-        return escapedContent;
+        return content;
     }
+  }
+  
+  /**
+   * Preprocess blockquotes to mark them before other parsing
+   */
+  private preprocessBlockquotes(text: string): string {
+    const lines = text.split('\n');
+    const processedLines: string[] = [];
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      // Only treat lines starting with > at the beginning of line as blockquotes
+      if (trimmedLine.startsWith('**>')) {
+        // Expandable blockquote
+        const content = trimmedLine.substring(3).trim();
+        processedLines.push(`[EXPANDABLE_QUOTE]${content}`);
+      } else if (trimmedLine.startsWith('>')) {
+        // Regular blockquote
+        const content = trimmedLine.substring(1).trim();
+        processedLines.push(`[QUOTE]${content}`);
+      } else {
+        processedLines.push(line);
+      }
+    }
+    
+    return processedLines.join('\n');
+  }
+  
+  /**
+   * Process blockquote markers
+   */
+  private processBlockquoteMarkers(text: string): string {
+    let result = text;
+    
+    // Replace expandable quote markers (process content recursively)
+    const expandableQuoteRegex = /\[EXPANDABLE_QUOTE\](.*?)(?=\n|$)/g;
+    result = result.replace(expandableQuoteRegex, (match, content) => {
+      const processedContent = this.convertRecursive(content);
+      return `\n<blockquote expandable>${processedContent.trim()}</blockquote>\n`;
+    });
+    
+    // Replace regular quote markers (process content recursively)
+    const quoteRegex = /\[QUOTE\](.*?)(?=\n|$)/g;
+    result = result.replace(quoteRegex, (match, content) => {
+      const processedContent = this.convertRecursive(content);
+      return `\n<blockquote>${processedContent.trim()}</blockquote>\n`;
+    });
+    
+    return result;
   }
   
   private defaultLinkProcessor(url: string, text: string): string {
@@ -107,52 +212,9 @@ export class MarkdownConverter {
     return `<a href="${escapedUrl}">${escapedText}</a>`;
   }
   
-  private defaultCodeBlockProcessor(code: string, language ? : string): string {
+  private defaultCodeBlockProcessor(code: string, language?: string): string {
     const escapedCode = this.options.escapeHtml ? escapeHtml(code) : code;
     const langAttr = language ? ` class="language-${language}"` : '';
     return `\n<pre><code${langAttr}>${escapedCode}</code></pre>\n`;
-  }
-  
-  private processBlockquotes(text: string): string {
-    // Process multiline blockquotes
-    const lines = text.split('\n');
-    const resultLines: string[] = [];
-    let inBlockquote = false;
-    let blockquoteContent = '';
-    
-    for (const line of lines) {
-      if (line.includes('<blockquote')) {
-        if (inBlockquote) {
-          blockquoteContent += line + '\n';
-        } else {
-          if (blockquoteContent) {
-            resultLines.push(blockquoteContent.trim());
-          }
-          blockquoteContent = line + '\n';
-          inBlockquote = true;
-        }
-      } else if (inBlockquote) {
-        if (line.trim() === '</blockquote>') {
-          blockquoteContent += line;
-          resultLines.push(blockquoteContent);
-          blockquoteContent = '';
-          inBlockquote = false;
-        } else {
-          blockquoteContent += line + '\n';
-        }
-      } else {
-        if (blockquoteContent) {
-          resultLines.push(blockquoteContent.trim());
-          blockquoteContent = '';
-        }
-        resultLines.push(line);
-      }
-    }
-    
-    if (blockquoteContent) {
-      resultLines.push(blockquoteContent.trim());
-    }
-    
-    return resultLines.join('\n');
   }
 }

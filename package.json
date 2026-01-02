@@ -2,22 +2,23 @@
   "name": "telegram-md2html",
   "version": "1.0.0",
   "description": "A smart converter for Telegram-style Markdown to Telegram-compatible HTML",
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
-  "types": "dist/index.d.ts",
-  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/index.esm.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c && npm run build:types",
+    "build:types": "cp dist/index.d.ts dist/index.d.mts",
     "dev": "rollup -c -w",
-    "test": "jest",
-    "prepublishOnly": "npm run build && npm test"
+    "test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:ci": "npm test -- --coverage",
+    "prepublishOnly": "npm run build && npm run test"
   },
   "keywords": [
     "telegram",
@@ -27,7 +28,7 @@
     "bot",
     "messaging"
   ],
-  "author": "Your Name",
+  "author": "Soumyadeep Das <soumyadeepdas765@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",
@@ -43,6 +44,13 @@
   },
   "files": [
     "dist",
-    "README.md"
-  ]
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "telegram-md2html": "^1.0.0"
+  }
 }
