@@ -8,7 +8,7 @@
   "scripts": {
     "build": "rollup -c",
     "dev": "tsc --watch",
-    "test": "node test/test.js"
+    "test": "node tests/test.js"
   },
   "keywords": ["telegram", "markdown", "html", "bot"],
   "author": "",
