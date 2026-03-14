@@ -296,17 +296,22 @@ If you find this library useful, please consider:
 
 ## Changelog
 
-### v1.0.0
+### v1.0.1
 - Initial release
 - Complete Telegram markdown support
 - TypeScript definitions
 - Browser compatibility
 - Custom processor support
 
+### v1.0.2
+- **Improved output formatting**: Removed extra newlines around code blocks and quotes
+-  Cleaner HTML output without unnecessary whitespace
+-  Better preservation of original markdown formatting
+
 ## Author
 
 **Soumyadeep Das**
-- GitHub: [@Soumyadeep765](https://github.com/Soumyadeep765)
+- GitHub: [@Soumyadeep765](https://github.com/Soumyadeep765/telegram-md2html)
 - Email: soumyadeepdas765@gmail.com
 
 ## Acknowledgments

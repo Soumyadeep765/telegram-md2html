@@ -289,6 +289,8 @@ class MarkdownConverter {
     }
     /**
      * Wrap token content in HTML tags
+     * FIXED: Removed extra newlines that were being added around code blocks and quotes
+     * Previously added \n before and after, now returns clean tags without extra whitespace
      */
     wrapToken(type, content, language) {
         switch (type) {
@@ -312,7 +314,8 @@ class MarkdownConverter {
                 }
                 const escapedCode = this.options.escapeHtml ? escapeHtml(content) : content;
                 const langAttr = language ? ` class="language-${language}"` : '';
-                return `\n<pre><code${langAttr}>${escapedCode}</code></pre>\n`;
+                // FIXED: Removed \n before and after - now returns just the tag
+                return `<pre><code${langAttr}>${escapedCode}</code></pre>`;
             case 'link':
                 const url = language || '';
                 if (this.hasCustomLinkProcessor) {
@@ -322,9 +325,11 @@ class MarkdownConverter {
                 const escapedText = this.options.escapeHtml ? escapeHtml(content) : content;
                 return `<a href="${escapedUrl}">${escapedText}</a>`;
             case 'quote':
-                return `\n<blockquote>${content.trim()}</blockquote>\n`;
+                // FIXED: Removed \n before and after - now returns just the tag
+                return `<blockquote>${content.trim()}</blockquote>`;
             case 'expandable_quote':
-                return `\n<blockquote expandable>${content.trim()}</blockquote>\n`;
+                // FIXED: Removed \n before and after - now returns just the tag
+                return `<blockquote expandable>${content.trim()}</blockquote>`;
             default:
                 return content;
         }
@@ -356,6 +361,7 @@ class MarkdownConverter {
     }
     /**
      * Process blockquote markers
+     * FIXED: Removed extra newlines from the replacement strings
      */
     processBlockquoteMarkers(text) {
         let result = text;
@@ -363,13 +369,15 @@ class MarkdownConverter {
         const expandableQuoteRegex = /\[EXPANDABLE_QUOTE\](.*?)(?=\n|$)/g;
         result = result.replace(expandableQuoteRegex, (match, content) => {
             const processedContent = this.convertRecursive(content);
-            return `\n<blockquote expandable>${processedContent.trim()}</blockquote>\n`;
+            // FIXED: Removed \n before and after
+            return `<blockquote expandable>${processedContent.trim()}</blockquote>`;
         });
         // Replace regular quote markers (process content recursively)
         const quoteRegex = /\[QUOTE\](.*?)(?=\n|$)/g;
         result = result.replace(quoteRegex, (match, content) => {
             const processedContent = this.convertRecursive(content);
-            return `\n<blockquote>${processedContent.trim()}</blockquote>\n`;
+            // FIXED: Removed \n before and after
+            return `<blockquote>${processedContent.trim()}</blockquote>`;
         });
         return result;
     }
@@ -381,7 +389,8 @@ class MarkdownConverter {
     defaultCodeBlockProcessor(code, language) {
         const escapedCode = this.options.escapeHtml ? escapeHtml(code) : code;
         const langAttr = language ? ` class="language-${language}"` : '';
-        return `\n<pre><code${langAttr}>${escapedCode}</code></pre>\n`;
+        // FIXED: Removed \n before and after in default processor too
+        return `<pre><code${langAttr}>${escapedCode}</code></pre>`;
     }
 }
 

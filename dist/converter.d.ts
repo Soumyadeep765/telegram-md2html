@@ -14,6 +14,8 @@ export declare class MarkdownConverter {
     private convertRecursive;
     /**
      * Wrap token content in HTML tags
+     * FIXED: Removed extra newlines that were being added around code blocks and quotes
+     * Previously added \n before and after, now returns clean tags without extra whitespace
      */
     private wrapToken;
     /**
@@ -22,6 +24,7 @@ export declare class MarkdownConverter {
     private preprocessBlockquotes;
     /**
      * Process blockquote markers
+     * FIXED: Removed extra newlines from the replacement strings
      */
     private processBlockquoteMarkers;
     private defaultLinkProcessor;
