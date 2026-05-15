@@ -132,19 +132,27 @@ const html = converter.convert('**[Important Link](https://example.com)**');
 ## Supported Markdown Syntax
 
 | Markdown | HTML Output | Description |
-|----------|-------------|-------------|
-| `## text` | `<b>▎ text</b>` | Level 2 heading (bold + symbol) |
-| `### text` | `<b>▎ text</b>` | Level 3 heading (bold + symbol) |
+| --- | --- | --- |
+| `# text` | `<b>▎ text</b>` | Level 1 heading |
+| `## text` | `<b>▎ text</b>` | Level 2 heading |
+| `### text` | `<b>▎ text</b>` | Level 3 heading |
+| `#### text` | `<b>▎ text</b>` | Level 4 heading |
+| `##### text` | `<b>▎ text</b>` | Level 5 heading |
+| `###### text` | `<b>▎ text</b>` | Level 6 heading |
 | `**text**` | `<b>text</b>` | Bold text |
 | `*text*` or `_text_` | `<i>text</i>` | Italic text |
 | `__text__` | `<u>text</u>` | Underlined text |
 | `~~text~~` | `<s>text</s>` | Strikethrough text |
-| `||text||` | `<span class="tg-spoiler">text</span>` | Spoiler text |
-| `/`code/`` | `<code>code</code>` | Inline code |
-| ```language\\ncode\\n``` | `<pre><code class="language-xxx">code</code></pre>` | Code block |
-| `[text](url)` | `<a href="url">text</a>` | Link |
+| `\|\|text\|\|` | `<span class="tg-spoiler">text</span>` | Spoiler text |
+| `` `code` `` | `<code>code</code>` | Inline code |
+| \`\`\`language\ncode\n\`\`\` | `<pre><code class="language-xxx">code</code></pre>` | Code block |
+| `[text](url)` | `<a href="url">text</a>` | Hyperlink |
 | `> text` | `<blockquote>text</blockquote>` | Blockquote |
-| `**> text` | `<blockquote expandable>text</blockquote>` | Expandable blockquote |
+| `**> text**` | `<blockquote expandable>text</blockquote>` | Expandable blockquote |
+| `- text` | `<ul><li>text</li></ul>` | Unordered list |
+| `1. text` | `<ol><li>text</li></ol>` | Ordered list |
+| `---` | `<hr>` | Horizontal rule |
+| `![alt](url)` | `<img src="url" alt="alt">` | Image |
 
 ## API Reference
 
