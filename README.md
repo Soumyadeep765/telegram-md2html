@@ -12,7 +12,9 @@ A smart and efficient TypeScript/JavaScript library for converting Telegram-styl
 
 - **Complete Telegram Markdown Support**: All Telegram-specific formatting options
 - **Smart Parsing**: Handles nested styles and complex formatting
+- **Username Protection**: Underscores in usernames (e.g., @username_bot) are preserved
 - **HTML Safety**: Automatic escaping of HTML special characters
+- **Heading Support**: Convert \`##\` and \`###\` to bold text with custom symbols
 - **Code Block Support**: Inline code and multiline code blocks with language specification
 - **Blockquote Support**: Regular and expandable blockquotes
 - **Customizable**: Extensible with custom processors
@@ -22,17 +24,17 @@ A smart and efficient TypeScript/JavaScript library for converting Telegram-styl
 
 ## Installation
 
-```bash
+````bash
 npm install telegram-md2html
 # or
 yarn add telegram-md2html
 # or
 pnpm add telegram-md2html
-```
+````
 
 ## Quick Start
 
-```javascript
+````javascript
 // CommonJS
 const { markdownToHtml } = require('telegram-md2html');
 
@@ -43,17 +45,17 @@ import { markdownToHtml } from 'telegram-md2html';
 const html = markdownToHtml('**Hello** *World*!');
 console.log(html);
 // Output: <b>Hello</b> <i>World</i>!
-```
+````
 
 ## Usage Examples
 
 ### Basic Conversion
 
-```javascript
+````javascript
 import { markdownToHtml } from 'telegram-md2html';
 
-const markdown = `
-# Welcome to Telegram Bot
+const markdown = \`
+## Welcome to Telegram Bot
 
 **Bold text** and *italic text*
 __Underlined__ and ~~strikethrough~~
@@ -66,67 +68,103 @@ __Underlined__ and ~~strikethrough~~
 > This is a quote
 **> Expandable quote
 
-\`\`\`javascript
+````javascript
 console.log("Hello World");
-\`\`\`
-`;
+````
+\`;
 
 const html = markdownToHtml(markdown);
 console.log(html);
-```
+````
+
+### Headings with Custom Symbol
+
+````javascript
+import { createConverter } from 'telegram-md2html';
+
+// Custom symbol for headings
+const converter = createConverter({ 
+  headingSymbol: '📌'  // or '▎' (default), '⚡', '🔹', etc.
+});
+
+const html = converter.convert('## Important Title');
+// Output: <b>📌 Important Title</b>
+
+// No symbol (just bold)
+const blankConverter = createConverter({ headingBlank: true });
+const result = blankConverter.convert('### Subtitle');
+// Output: <b>Subtitle</b>
+````
+
+### Username Protection
+
+````javascript
+import { markdownToHtml } from 'telegram-md2html';
+
+// Underscores in usernames are NOT converted to italic
+const html = markdownToHtml('Hello @my_telegram_bot');
+// Output: Hello @my_telegram_bot (preserved, no italic formatting)
+
+// Real italic still works
+const html2 = markdownToHtml('This is *italic* text');
+// Output: This is <i>italic</i> text
+````
 
 ### Advanced Usage with Options
 
-```javascript
+````javascript
 import { createConverter } from 'telegram-md2html';
 
 // Create a converter with custom options
 const converter = createConverter({
   escapeHtml: true,
   autoCloseCodeBlocks: true,
+  headingSymbol: '🔹',
   linkProcessor: (url, text) => 
-    `<a href="${url}" target="_blank" rel="noopener">${text}</a>`,
+    \`<a href="\${url}" target="_blank" rel="noopener">\${text}</a>\`,
   codeBlockProcessor: (code, language) => 
-    `<pre><code class="language-${language || 'text'}">${code}</code></pre>`
+    \`<pre><code class="language-\${language || 'text'}">\${code}</code></pre>\`
 });
 
 const html = converter.convert('**[Important Link](https://example.com)**');
-```
+````
 
 ## Supported Markdown Syntax
 
 | Markdown | HTML Output | Description |
 |----------|-------------|-------------|
-| `**text**` | `<b>text</b>` | Bold text |
-| `*text*` or `_text_` | `<i>text</i>` | Italic text |
-| `__text__` | `<u>text</u>` | Underlined text |
-| `~~text~~` | `<s>text</s>` | Strikethrough text |
-| `\|\|text\|\|` | `<span class="tg-spoiler">text</span>` | Spoiler text |
-| `` `code` `` | `<code>code</code>` | Inline code |
-| ```` ```language\ncode\n``` ```` | `<pre><code class="language-xxx">code</code></pre>` | Code block |
-| `[text](url)` | `<a href="url">text</a>` | Link |
-| `> text` | `<blockquote>text</blockquote>` | Blockquote |
-| `**> text` | `<blockquote expandable>text</blockquote>` | Expandable blockquote |
+| \`## text\` | \`<b>▎ text</b>\` | Level 2 heading (bold + symbol) |
+| \`### text\` | \`<b>▎ text</b>\` | Level 3 heading (bold + symbol) |
+| \`**text**\` | \`<b>text</b>\` | Bold text |
+| \`*text*\` or \`_text_\` | \`<i>text</i>\` | Italic text |
+| \`__text__\` | \`<u>text</u>\` | Underlined text |
+| \`~~text~~\` | \`<s>text</s>\` | Strikethrough text |
+| \`||text||\` | \`<span class="tg-spoiler">text</span>\` | Spoiler text |
+| \`\`code\`\` | \`<code>code</code>\` | Inline code |
+| ````language\\ncode\\n```` | \`<pre><code class="language-xxx">code</code></pre>\` | Code block |
+| \`[text](url)\` | \`<a href="url">text</a>\` | Link |
+| \`> text\` | \`<blockquote>text</blockquote>\` | Blockquote |
+| \`**> text\` | \`<blockquote expandable>text</blockquote>\` | Expandable blockquote |
 
 ## API Reference
 
-### `markdownToHtml(text: string, options?: ConvertOptions): string`
+### \`markdownToHtml(text: string, options?: ConvertOptions): string\`
 
 Main conversion function that converts Telegram-style markdown to HTML.
 
 **Parameters:**
-- `text`: The markdown text to convert
-- `options`: Optional conversion options
+- \`text\`: The markdown text to convert
+- \`options\`: Optional conversion options
 
 **Returns:** Telegram-compatible HTML string
 
-### `createConverter(options?: ConvertOptions): MarkdownConverter`
+### \`createConverter(options?: ConvertOptions): MarkdownConverter\`
 
 Creates a converter instance with custom options for reuse.
 
 ### ConvertOptions Interface
 
-```typescript
+````typescript
 interface ConvertOptions {
   /** Whether to escape HTML special characters (default: true) */
   escapeHtml?: boolean;
@@ -134,30 +172,37 @@ interface ConvertOptions {
   /** Whether to auto-close unclosed code blocks (default: true) */
   autoCloseCodeBlocks?: boolean;
   
+  /** Custom symbol for headings (default: '▎') */
+  headingSymbol?: string;
+  
+  /** Whether to show blank (no symbol) for headings (default: false) */
+  headingBlank?: boolean;
+  
   /** Custom link processor function */
   linkProcessor?: (url: string, text: string) => string;
   
   /** Custom code block processor function */
   codeBlockProcessor?: (code: string, language?: string) => string;
 }
-```
+````
 
 ## TypeScript Support
 
 The library includes full TypeScript definitions. Just import and use:
 
-```typescript
+````typescript
 import { markdownToHtml, ConvertOptions } from 'telegram-md2html';
 
 const options: ConvertOptions = {
   escapeHtml: false,
+  headingSymbol: '⚡',
   linkProcessor: (url: string, text: string): string => {
-    return `<a href="${url}" class="custom-link">${text}</a>`;
+    return \`<a href="\${url}" class="custom-link">\${text}</a>\`;
   }
 };
 
-const html: string = markdownToHtml('**TypeScript** works!', options);
-```
+const html: string = markdownToHtml('## TypeScript works!', options);
+````
 
 ## Browser Usage
 
@@ -165,59 +210,60 @@ The library can be used in modern browsers:
 
 ### Using ES Modules (Recommended)
 
-```html
+````html
 <script type="module">
   import { markdownToHtml } from 'https://cdn.jsdelivr.net/npm/telegram-md2html/dist/index.mjs';
   
   const html = markdownToHtml('**Hello** from browser!');
   document.getElementById('output').innerHTML = html;
 </script>
-```
+````
 
 ### Using from GitHub
 
-```html
+````html
 <script type="module">
   import { markdownToHtml } from 'https://cdn.jsdelivr.net/gh/Soumyadeep765/telegram-md2html@main/dist/index.mjs';
   
   const html = markdownToHtml('**Hello** World');
   document.getElementById('output').innerHTML = html;
 </script>
-```
+````
 
 ### Using a CDN
 
-```html
+````html
 <script src="https://cdn.jsdelivr.net/npm/telegram-md2html/dist/index.js"></script>
 <script>
   // Available as window.telegramMd2Html
   const html = telegramMd2Html.markdownToHtml('**CDN** Example');
   document.getElementById('output').innerHTML = html;
 </script>
-```
+````
 
 ### Complex Nested Example
 
-```javascript
-const result = markdownToHtml(`
-**Welcome to our bot!**
+````javascript
+const result = markdownToHtml(\`
+## Welcome to our bot!
 
 Features:
 • *Easy formatting*
 • __Multiple styles__
 • ~~Clean output~~
+• Username @test_bot works fine
 
-\`\`\`python
+````python
 def greet():
     print("Hello from Python!")
-\`\`\`
+````
 
 > Remember: **Formatting** makes messages _better_
 **> Click to expand details
-`);
+\`);
 
 console.log(result);
-```
+````
 
 ## Error Handling
 
@@ -227,6 +273,7 @@ The library handles edge cases gracefully:
 - HTML characters are properly escaped by default
 - Invalid markdown is treated as plain text
 - Nested styles are processed correctly
+- Usernames with underscores are not treated as italic
 
 ## Performance
 
@@ -241,17 +288,17 @@ The library is optimized for performance:
 Contributions are welcome! Here's how you can help:
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
+2. Create a feature branch: \`git checkout -b feature-name\`
 3. Make your changes
 4. Add tests for new functionality
-5. Run tests: `npm test`
-6. Commit your changes: `git commit -am 'Add feature'`
-7. Push to the branch: `git push origin feature-name`
+5. Run tests: \`npm test\`
+6. Commit your changes: \`git commit -am 'Add feature'\`
+7. Push to the branch: \`git push origin feature-name\`
 8. Submit a pull request
 
 ### Development Setup
 
-```bash
+````bash
 # Clone the repository
 git clone https://github.com/Soumyadeep765/telegram-md2html.git
 cd telegram-md2html
@@ -267,19 +314,19 @@ npm test
 
 # Watch mode for development
 npm run dev
-```
+````
 
 ## Testing
 
 The library includes comprehensive tests:
 
-```bash
+````bash
 # Run all tests
 npm test
 
 # Run tests with coverage
 npm test -- --coverage
-```
+````
 
 ## License
 
@@ -296,17 +343,25 @@ If you find this library useful, please consider:
 
 ## Changelog
 
+### v1.0.3 (Current)
+- **Fixed**: Username underscore bug - \`@username_bot\` no longer triggers italic formatting
+- **Added**: Heading support for \`##\` and \`###\` with configurable symbol (default: '▎')
+- **Added**: \`headingSymbol\` and \`headingBlank\` options for heading customization
+- **Improved**: Italic detection with word boundary checks
+- **Fixed**: Preserved underscores in usernames, file names, and code blocks
+- **Improved**: Better handling of mixed formatting with usernames
+
+### v1.0.2
+- **Improved output formatting**: Removed extra newlines around code blocks and quotes
+- Cleaner HTML output without unnecessary whitespace
+- Better preservation of original markdown formatting
+
 ### v1.0.1
 - Initial release
 - Complete Telegram markdown support
 - TypeScript definitions
 - Browser compatibility
 - Custom processor support
-
-### v1.0.2
-- **Improved output formatting**: Removed extra newlines around code blocks and quotes
--  Cleaner HTML output without unnecessary whitespace
--  Better preservation of original markdown formatting
 
 ## Author
 
