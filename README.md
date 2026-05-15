@@ -133,12 +133,8 @@ const html = converter.convert('**[Important Link](https://example.com)**');
 
 | Markdown | HTML Output | Description |
 | --- | --- | --- |
-| `# text` | `<b>▎ text</b>` | Level 1 heading |
 | `## text` | `<b>▎ text</b>` | Level 2 heading |
 | `### text` | `<b>▎ text</b>` | Level 3 heading |
-| `#### text` | `<b>▎ text</b>` | Level 4 heading |
-| `##### text` | `<b>▎ text</b>` | Level 5 heading |
-| `###### text` | `<b>▎ text</b>` | Level 6 heading |
 | `**text**` | `<b>text</b>` | Bold text |
 | `*text*` or `_text_` | `<i>text</i>` | Italic text |
 | `__text__` | `<u>text</u>` | Underlined text |
