@@ -68,9 +68,9 @@ __Underlined__ and ~~strikethrough~~
 > This is a quote
 **> Expandable quote
 
-```javascript
+\`\`\`javascript
 console.log("Hello World");
-```
+\`\`\`
 `;
 
 const html = markdownToHtml(markdown);
@@ -140,7 +140,7 @@ const html = converter.convert('**[Important Link](https://example.com)**');
 | `__text__` | `<u>text</u>` | Underlined text |
 | `~~text~~` | `<s>text</s>` | Strikethrough text |
 | `||text||` | `<span class="tg-spoiler">text</span>` | Spoiler text |
-| ``code`` | `<code>code</code>` | Inline code |
+| `/`code/`` | `<code>code</code>` | Inline code |
 | ```language\\ncode\\n``` | `<pre><code class="language-xxx">code</code></pre>` | Code block |
 | `[text](url)` | `<a href="url">text</a>` | Link |
 | `> text` | `<blockquote>text</blockquote>` | Blockquote |
@@ -253,7 +253,7 @@ Features:
 • ~~Clean output~~
 • Username @test_bot works fine
 
-```python
+\`\`\`python
 def greet():
     print("Hello from Python!")
 ```
@@ -263,7 +263,7 @@ def greet():
 `);
 
 console.log(result);
-```
+\`\`\`
 
 ## Error Handling
 
