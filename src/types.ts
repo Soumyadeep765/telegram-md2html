@@ -12,6 +12,17 @@ export interface ConvertOptions {
   autoCloseCodeBlocks?: boolean;
   
   /**
+   * Custom symbol for headings (default: '▎')
+   */
+  headingSymbol?: string;
+  
+  /**
+   * Whether to show blank (no symbol) for headings
+   * @default false
+   */
+  headingBlank?: boolean;
+  
+  /**
    * Custom replacement function for links
    */
   linkProcessor?: (url: string, text: string) => string;

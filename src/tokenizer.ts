@@ -7,22 +7,17 @@ export class MarkdownTokenizer {
     this.text = text;
   }
   
-  /**
-   * Tokenize the markdown text
-   */
   tokenize(): Token[] {
     const tokens: Token[] = [];
     let pos = 0;
     const text = this.text;
     
     while (pos < text.length) {
-      // Skip if inside code block
       if (this.isInsideCodeBlock(text, pos)) {
         pos++;
         continue;
       }
       
-      // Try to match each token type (from outermost to innermost)
       const token = this.matchToken(pos);
       
       if (token) {
@@ -40,12 +35,24 @@ export class MarkdownTokenizer {
     const text = this.text;
     const remaining = text.slice(start);
     
-    // Skip if we're inside a quote marker
     if (remaining.startsWith('[QUOTE]') || remaining.startsWith('[EXPANDABLE_QUOTE]')) {
       return null;
     }
     
-    // Match code block (triple backticks) - highest priority
+    // Match headings (###, ##)
+    const headingMatch = remaining.match(/^(#{1,3})\s+(.+?)(?=\n|$)/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const content = headingMatch[2];
+      return {
+        type: `heading_${level}`,
+        content: content,
+        start: start,
+        end: start + headingMatch[0].length
+      };
+    }
+    
+    // Match code block (triple backticks)
     const codeBlockMatch = remaining.match(/^```(\w+)?\n([\s\S]*?)```/);
     if (codeBlockMatch) {
       return {
@@ -112,11 +119,20 @@ export class MarkdownTokenizer {
       };
     }
     
-    // Match italic with asterisk
-    const italicAsteriskMatch = remaining.match(/^\*([^*\n][^*]*?)\*/);
+    // FIXED: Match italic with asterisk - require space before and after
+    const italicAsteriskMatch = remaining.match(/^\*([^*\s][^*]*?[^*\s])\*/);
     if (italicAsteriskMatch && italicAsteriskMatch[1].trim().length > 0) {
       // Don't match if it's part of bold (**)
       if (start > 0 && text[start - 1] === '*' && start < text.length - 1 && text[start + 1] === '*') {
+        return null;
+      }
+      // Check if preceded by alphanumeric or underscore (prevents matching words like *italic* inside words)
+      if (start > 0 && /[a-zA-Z0-9_]/.test(text[start - 1])) {
+        return null;
+      }
+      // Check if followed by alphanumeric or underscore
+      const afterMatch = start + italicAsteriskMatch[0].length;
+      if (afterMatch < text.length && /[a-zA-Z0-9_]/.test(text[afterMatch])) {
         return null;
       }
       return {
@@ -127,11 +143,23 @@ export class MarkdownTokenizer {
       };
     }
     
-    // Match italic with underscore
-    const italicUnderscoreMatch = remaining.match(/^_([^_\n]+?)_/);
+    // FIXED: Match italic with underscore - require word boundaries and not part of username
+    const italicUnderscoreMatch = remaining.match(/^_([^_\s][^_]*?[^_\s])_/);
     if (italicUnderscoreMatch && italicUnderscoreMatch[1].trim().length > 0) {
       // Don't match if it's part of underline (__)
       if (start > 0 && text[start - 1] === '_' && start < text.length - 1 && text[start + 1] === '_') {
+        return null;
+      }
+      // FIXED: Don't match if preceded by @ (username) or alphanumeric
+      if (start > 0) {
+        const prevChar = text[start - 1];
+        if (prevChar === '@' || /[a-zA-Z0-9]/.test(prevChar)) {
+          return null;
+        }
+      }
+      // Don't match if followed by alphanumeric (part of word)
+      const afterMatch = start + italicUnderscoreMatch[0].length;
+      if (afterMatch < text.length && /[a-zA-Z0-9]/.test(text[afterMatch])) {
         return null;
       }
       return {
@@ -158,13 +186,11 @@ export class MarkdownTokenizer {
   }
   
   private isInsideCodeBlock(text: string, position: number): boolean {
-    // Check for code blocks
     const codeBlockRegex = /```[\s\S]*?```/g;
     let match;
     
     while ((match = codeBlockRegex.exec(text)) !== null) {
       if (position > match.index && position < match.index + match[0].length) {
-        // But allow matching the closing ``` itself
         if (position >= match.index + match[0].length - 3) {
           return false;
         }
@@ -176,13 +202,11 @@ export class MarkdownTokenizer {
   }
   
   private isInsideInlineCode(text: string, position: number): boolean {
-    // Check for inline code
     const inlineCodeRegex = /`[^`\n]*`/g;
     let match;
     
     while ((match = inlineCodeRegex.exec(text)) !== null) {
       if (position > match.index && position < match.index + match[0].length) {
-        // But allow matching the closing ` itself
         if (position === match.index + match[0].length - 1) {
           return false;
         }

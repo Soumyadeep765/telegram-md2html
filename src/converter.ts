@@ -6,56 +6,49 @@ export class MarkdownConverter {
   private options: Required<ConvertOptions>;
   private hasCustomLinkProcessor: boolean;
   private hasCustomCodeBlockProcessor: boolean;
+  private headingSymbol: string;
   
   constructor(options: ConvertOptions = {}) {
     this.hasCustomLinkProcessor = !!options.linkProcessor;
     this.hasCustomCodeBlockProcessor = !!options.codeBlockProcessor;
     
+    // Fixed: Add heading symbol option (default: '▎')
+    this.headingSymbol = options.headingSymbol ?? '▎';
+    
     this.options = {
       escapeHtml: options.escapeHtml ?? true,
       autoCloseCodeBlocks: options.autoCloseCodeBlocks ?? true,
+      headingSymbol: options.headingSymbol ?? '▎',
+      headingBlank: options.headingBlank ?? false,
       linkProcessor: options.linkProcessor || this.defaultLinkProcessor.bind(this),
       codeBlockProcessor: options.codeBlockProcessor || this.defaultCodeBlockProcessor.bind(this)
     };
   }
   
-  /**
-   * Convert markdown text to Telegram HTML
-   */
   convert(text: string): string {
-    // Auto-close code blocks if enabled
     let processedText = this.options.autoCloseCodeBlocks 
       ? autoCloseCodeBlocks(text) 
       : text;
     
-    // First pass: convert blockquotes (they should be at line starts)
     processedText = this.preprocessBlockquotes(processedText);
     
-    // Convert the text recursively
     let result = this.convertRecursive(processedText);
     
-    // Process blockquote markers
     result = this.processBlockquoteMarkers(result);
     
-    // Only trim if there's actual content (not just whitespace)
     if (result.trim() === '') {
-      return text; // Return original text (spaces) if result is empty
+      return text;
     }
     
     return result.trim();
   }
   
-  /**
-   * Recursively convert markdown, handling nested styles
-   */
   private convertRecursive(text: string, depth = 0): string {
-    if (depth > 10) return text; // Prevent infinite recursion
+    if (depth > 10) return text;
     
-    // Tokenize the text
     const tokenizer = new MarkdownTokenizer(text);
     const tokens = tokenizer.tokenize();
     
-    // If no tokens found, return the text as-is (with HTML escaping)
     if (tokens.length === 0) {
       return this.options.escapeHtml ? escapeTelegramHtml(text) : text;
     }
@@ -64,13 +57,25 @@ export class MarkdownConverter {
     let lastPos = 0;
     
     for (const token of tokens) {
-      // Add text before token
       if (token.start > lastPos) {
         const textBefore = text.slice(lastPos, token.start);
         result += this.options.escapeHtml ? escapeTelegramHtml(textBefore) : textBefore;
       }
       
-      // Handle code blocks specially (no recursive parsing inside)
+      // Fixed: Handle headings
+      if (token.type === 'heading_2' || token.type === 'heading_3') {
+        const level = token.type === 'heading_2' ? '##' : '###';
+        const processedContent = this.convertRecursive(token.content, depth + 1);
+        
+        // Fixed: Add symbol and bold styling
+        const symbol = this.options.headingBlank ? '' : this.headingSymbol;
+        const headingText = symbol ? `${symbol} ${processedContent}` : processedContent;
+        
+        result += `<b>${headingText}</b>`;
+        lastPos = token.end;
+        continue;
+      }
+      
       if (token.type === 'code_block') {
         const codeContent = this.options.escapeHtml ? escapeHtml(token.content) : token.content;
         result += this.wrapToken(token.type, codeContent, token.language);
@@ -78,7 +83,6 @@ export class MarkdownConverter {
         continue;
       }
       
-      // Handle inline code specially (no recursive parsing inside)
       if (token.type === 'inline_code') {
         const codeContent = this.options.escapeHtml ? escapeHtml(token.content) : token.content;
         result += `<code>${codeContent}</code>`;
@@ -86,15 +90,12 @@ export class MarkdownConverter {
         continue;
       }
       
-      // Process other token content recursively
       const tokenContent = this.convertRecursive(token.content, depth + 1);
       
-      // Wrap the content in appropriate HTML tags
       result += this.wrapToken(token.type, tokenContent, token.language);
       lastPos = token.end;
     }
     
-    // Add remaining text
     if (lastPos < text.length) {
       const remainingText = text.slice(lastPos);
       result += this.options.escapeHtml ? escapeTelegramHtml(remainingText) : remainingText;
@@ -103,11 +104,6 @@ export class MarkdownConverter {
     return result;
   }
   
-  /**
-   * Wrap token content in HTML tags
-   * FIXED: Removed extra newlines that were being added around code blocks and quotes
-   * Previously added \n before and after, now returns clean tags without extra whitespace
-   */
   private wrapToken(type: string, content: string, language?: string): string {
     switch (type) {
       case 'bold':
@@ -126,17 +122,14 @@ export class MarkdownConverter {
         return `<span class="tg-spoiler">${content}</span>`;
       
       case 'inline_code':
-        // Already handled above
         return `<code>${content}</code>`;
       
       case 'code_block':
-        // Already handled above, but handle custom processor
         if (this.hasCustomCodeBlockProcessor) {
           return this.options.codeBlockProcessor(content, language);
         }
         const escapedCode = this.options.escapeHtml ? escapeHtml(content) : content;
         const langAttr = language ? ` class="language-${language}"` : '';
-        // FIXED: Removed \n before and after - now returns just the tag
         return `<pre><code${langAttr}>${escapedCode}</code></pre>`;
       
       case 'link':
@@ -149,11 +142,9 @@ export class MarkdownConverter {
         return `<a href="${escapedUrl}">${escapedText}</a>`;
       
       case 'quote':
-        // FIXED: Removed \n before and after - now returns just the tag
         return `<blockquote>${content.trim()}</blockquote>`;
       
       case 'expandable_quote':
-        // FIXED: Removed \n before and after - now returns just the tag
         return `<blockquote expandable>${content.trim()}</blockquote>`;
       
       default:
@@ -161,9 +152,6 @@ export class MarkdownConverter {
     }
   }
   
-  /**
-   * Preprocess blockquotes to mark them before other parsing
-   */
   private preprocessBlockquotes(text: string): string {
     const lines = text.split('\n');
     const processedLines: string[] = [];
@@ -171,13 +159,10 @@ export class MarkdownConverter {
     for (const line of lines) {
       const trimmedLine = line.trim();
       
-      // Only treat lines starting with > at the beginning of line as blockquotes
       if (trimmedLine.startsWith('**>')) {
-        // Expandable blockquote
         const content = trimmedLine.substring(3).trim();
         processedLines.push(`[EXPANDABLE_QUOTE]${content}`);
       } else if (trimmedLine.startsWith('>')) {
-        // Regular blockquote
         const content = trimmedLine.substring(1).trim();
         processedLines.push(`[QUOTE]${content}`);
       } else {
@@ -188,26 +173,18 @@ export class MarkdownConverter {
     return processedLines.join('\n');
   }
   
-  /**
-   * Process blockquote markers
-   * FIXED: Removed extra newlines from the replacement strings
-   */
   private processBlockquoteMarkers(text: string): string {
     let result = text;
     
-    // Replace expandable quote markers (process content recursively)
     const expandableQuoteRegex = /\[EXPANDABLE_QUOTE\](.*?)(?=\n|$)/g;
     result = result.replace(expandableQuoteRegex, (match, content) => {
       const processedContent = this.convertRecursive(content);
-      // FIXED: Removed \n before and after
       return `<blockquote expandable>${processedContent.trim()}</blockquote>`;
     });
     
-    // Replace regular quote markers (process content recursively)
     const quoteRegex = /\[QUOTE\](.*?)(?=\n|$)/g;
     result = result.replace(quoteRegex, (match, content) => {
       const processedContent = this.convertRecursive(content);
-      // FIXED: Removed \n before and after
       return `<blockquote>${processedContent.trim()}</blockquote>`;
     });
     
@@ -223,7 +200,6 @@ export class MarkdownConverter {
   private defaultCodeBlockProcessor(code: string, language?: string): string {
     const escapedCode = this.options.escapeHtml ? escapeHtml(code) : code;
     const langAttr = language ? ` class="language-${language}"` : '';
-    // FIXED: Removed \n before and after in default processor too
     return `<pre><code${langAttr}>${escapedCode}</code></pre>`;
   }
 }
