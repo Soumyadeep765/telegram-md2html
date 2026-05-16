@@ -145,10 +145,6 @@ const html = converter.convert('**[Important Link](https://example.com)**');
 | `[text](url)` | `<a href="url">text</a>` | Hyperlink |
 | `> text` | `<blockquote>text</blockquote>` | Blockquote |
 | `**> text**` | `<blockquote expandable>text</blockquote>` | Expandable blockquote |
-| `- text` | `<ul><li>text</li></ul>` | Unordered list |
-| `1. text` | `<ol><li>text</li></ol>` | Ordered list |
-| `---` | `<hr>` | Horizontal rule |
-| `![alt](url)` | `<img src="url" alt="alt">` | Image |
 
 ## API Reference
 
