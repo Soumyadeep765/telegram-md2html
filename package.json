@@ -1,6 +1,6 @@
 {
   "name": "telegram-md2html",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A smart converter for Telegram-style Markdown to Telegram-compatible HTML",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
